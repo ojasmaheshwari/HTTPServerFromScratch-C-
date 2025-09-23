@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 #include <filesystem>
 
@@ -15,7 +17,8 @@ enum HTTPError {
     UNSUPPORTED_METHOD,
     INVALID_HTTP_VERSION,
     NO_ERROR,
-    NOT_FOUND
+    NOT_FOUND,
+    FORBIDDEN
 };
 
 class HTTPParser
@@ -26,6 +29,13 @@ private:
     std::filesystem::path SERVER_ROOT;
     std::string response;
 
+    // Request information variables
+    std::string http_method;
+    std::string http_route;
+    std::string http_version;
+    std::unordered_map<std::string, std::string> http_headers;
+    std::string http_body;
+
 public:
     HTTPParser(const std::string &request);
 
@@ -35,6 +45,7 @@ public:
     // Parsing functions
     bool parse_request_line(const std::string &line);
     bool parse();
+    bool validate_fields();
 
     const std::string getResponse();
 };

@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 
 const std::string receive_line(int socket_fd, int MAX_SIZE)
 {
@@ -19,22 +20,20 @@ const std::string receive_line(int socket_fd, int MAX_SIZE)
     return buffer;
 }
 
-const std::string receive_http_req(int socket_fd)
+const std::string receive_http_req(int socket_fd, int MAX_SIZE)
 {
-    bool receive_flag = true;
-    std::string request;
+    char buffer[MAX_SIZE + 1];
+    int bytes_read = read(socket_fd, &buffer, MAX_SIZE);
 
-    while (receive_flag)
+    if (bytes_read == -1)
     {
-        std::string line = receive_line(socket_fd);
-
-        if (line == "\n")
-            receive_flag = false;
-        else
-            request.append(line);
+        perror("util.h - receive_http_req() failed");
+        exit(EXIT_FAILURE);
     }
 
-    return request;
+    buffer[bytes_read] = '\0';
+
+    return buffer;
 }
 
 void replaceAll(std::string &str, const std::string &from, const std::string &to)

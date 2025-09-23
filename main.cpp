@@ -34,10 +34,10 @@ int main()
     sockaddr_in address;
     address.sin_family = AF_INET;
 
-    // If we simply write address.sin_port = 8080; then we are storing the port in host byte order (defaults to little endian)
+    // If we simply write address.sin_port = 9173; then we are storing the port in host byte order (defaults to little endian)
     // But the socket libraries use network byte order which is big endian
     // So we use htons() to convert our integer from host byte order to network byte order
-    address.sin_port = htons(8080);
+    address.sin_port = htons(9173);
 
     // Now we need to store an IP address inside address.sin_addr
     // For that we make use of 'inet_pton' which converts a given IP address in string form to binary
@@ -110,8 +110,11 @@ int main()
             std::cerr << "--- [!] FAILED TO PARSE REQUEST ---\n";
         }
 
-        std::string response = parser.getResponse();
+        // std::string response = parser.getResponse();
+        std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!";
         const char* response_buffer = response.c_str();
+
+        std::cout << "Server response: " << parser.getResponse() << '\n';
 
         write(client_socket_fd, response_buffer, response.size());
     }
