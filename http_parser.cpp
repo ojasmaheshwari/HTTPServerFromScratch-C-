@@ -1,53 +1,54 @@
 #include "http_parser.h"
+#include "http_response_builder.h"
 #include "util.h"
+#include <filesystem>
 #include <iostream>
 #include <set>
-#include <utility>
 
 HTTPParser::HTTPParser(const std::string &request)
-    : request(request), SERVER_ROOT(std::filesystem::current_path()) {}
+    : request(request), SERVER_ROOT(std::filesystem::current_path() / "res") {}
 
-bool HTTPParser::parse_request_line(const std::string &line) {
-  auto parts = split(line, " ");
+// bool HTTPParser::parse_request_line(const std::string &line) {
+//   auto parts = split(line, " ");
 
-  if (parts.size() < 3) {
-    error = HTTPError::BAD_REQUEST;
-    return false;
-  }
+//   if (parts.size() < 3) {
+//     error = HTTPError::BAD_REQUEST;
+//     return false;
+//   }
 
-  std::string &method = parts[0];
-  std::string &path = parts[1];
-  std::string &version = parts[2];
+//   std::string &method = parts[0];
+//   std::string &path = parts[1];
+//   std::string &version = parts[2];
 
-  if (method != "GET") {
-    error = HTTPError::UNSUPPORTED_METHOD;
-    return false;
-  }
-  if (version != "HTTP/1.1") {
-    error = HTTPError::BAD_REQUEST;
-    return false;
-  }
+//   if (method != "GET") {
+//     error = HTTPError::UNSUPPORTED_METHOD;
+//     return false;
+//   }
+//   if (version != "HTTP/1.1") {
+//     error = HTTPError::BAD_REQUEST;
+//     return false;
+//   }
 
-  // Fetch file
-  std::string sanitized_path = sanitize_path(path);
-  if (sanitized_path.empty()) {
-    response = "";
-    error = HTTPError::NOT_FOUND;
-    return false;
-  }
+//   // Fetch file
+//   std::string sanitized_path = sanitize_path(path);
+//   if (sanitized_path.empty()) {
+//     response = "";
+//     error = HTTPError::NOT_FOUND;
+//     return false;
+//   }
 
-  std::filesystem::path full_path = SERVER_ROOT / sanitized_path.substr(1);
+//   std::filesystem::path full_path = SERVER_ROOT / sanitized_path.substr(1);
 
-  std::string content = read_file(full_path);
-  if (content == "Z\\\\[/") {
-    error = HTTPError::NOT_FOUND;
-    return false;
-  }
+//   std::string content = read_file(full_path);
+//   if (content == "Z\\\\[/") {
+//     error = HTTPError::NOT_FOUND;
+//     return false;
+//   }
 
-  response = content;
+//   response = content;
 
-  return true;
-}
+//   return true;
+// }
 
 bool HTTPParser::parse() {
   // Plan: Parse the request string into an object
@@ -63,7 +64,7 @@ bool HTTPParser::parse() {
   if (parts.size() != 2) {
     // Even in a GET request, this split should have been successfull
     // The request is malformed if this split is not successfull
-    error = HTTPError::BAD_REQUEST;
+    status = HTTPStatus::BAD_REQUEST;
     return false;
   }
   std::string request_metadata = parts[0];
@@ -77,7 +78,7 @@ bool HTTPParser::parse() {
 
   auto request_metadata_lines = split(request_metadata, "\r\n");
   if (request_metadata_lines.size() == 0) {
-    error = HTTPError::BAD_REQUEST;
+    status = HTTPStatus::BAD_REQUEST;
     return false;
   }
   request_line = request_metadata_lines[0];
@@ -92,7 +93,7 @@ bool HTTPParser::parse() {
   //      iii) HTTP Version
   auto request_line_data = split(request_line, " ");
   if (request_line_data.size() != 3) {
-    error = HTTPError::BAD_REQUEST;
+    status = HTTPStatus::BAD_REQUEST;
     return false;
   }
   http_method = request_line_data[0];
@@ -105,7 +106,7 @@ bool HTTPParser::parse() {
   for (const auto &header_str : headers_str) {
     auto data = split(header_str, ": ");
     if (data.size() != 2) {
-      error = HTTPError::BAD_REQUEST;
+      status = HTTPStatus::BAD_REQUEST;
       return false;
     }
 
@@ -114,8 +115,9 @@ bool HTTPParser::parse() {
 
   // STEP 5
   bool is_valid_request = validate_fields();
+  bool is_processing_successfull = process_request();
 
-  return is_valid_request;
+  return is_valid_request && is_processing_successfull;
 }
 
 // Validate data
@@ -129,45 +131,110 @@ bool HTTPParser::validate_fields() {
   std::set<std::string> allowed_http_versions = {"HTTP/1.1", "HTTP/1.0"};
 
   if (allowed_methods.count(http_method) == 0) {
-    error = HTTPError::UNSUPPORTED_METHOD;
+    status = HTTPStatus::UNSUPPORTED_METHOD;
     return false;
   }
   if (allowed_http_versions.count(http_version) == 0) {
-    error = HTTPError::BAD_REQUEST;
+    status = HTTPStatus::BAD_REQUEST;
     return false;
   }
   if (http_headers.count("Host") == 0) {
-    error = HTTPError::BAD_REQUEST;
+    status = HTTPStatus::BAD_REQUEST;
     return false;
   }
   const auto host = http_headers["Host"];
   if (host != "localhost:9173") {
-    error = HTTPError::FORBIDDEN;
+    status = HTTPStatus::FORBIDDEN;
     return false;
   }
 
   return true;
 }
 
-const std::string HTTPParser::getResponse() {
-  if (error == HTTPError::NO_ERROR) {
-    std::string metadata = "HTTP/1.1 200 OK\r\n\r\n";
-    response = metadata + response + "\r\n";
+bool HTTPParser::process_GET_request() {
+  // GET requests are used for fetching of files
+  // First of all we need to sanitize the route we recieved in order to protect
+  // against path traversals
 
-    return response;
-  } else {
-    if (error == HTTPError::BAD_REQUEST) {
-      response = "HTTP/1.1 400 Bad Request\r\n\r\n";
-    } else if (error == HTTPError::UNSUPPORTED_METHOD) {
-      response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
-    } else if (error == HTTPError::NOT_FOUND) {
-      response = "HTTP/1.1 404 Not Found\r\n\r\n";
-    } else if (error == HTTPError::FORBIDDEN) {
-      response = "HTTP/1.1 403 Forbidden\r\n\r\n";
-    } else {
-      response = "HTTP/1.1 418 I'm a teapot\r\n\r\n";
-    }
-
-    return response;
+  auto sanitized_route = sanitize_path(http_route);
+  if (!sanitized_route) {
+    status = HTTPStatus::FORBIDDEN;
+    return false;
   }
+
+  std::string route = sanitized_route.value();
+
+  // Check if the route is '/'
+  // Because in that case we need to check the presence of an index.html file
+  // and serve it
+  std::filesystem::path fullpath;
+  if (route == "/") {
+    fullpath = SERVER_ROOT / "index.html";
+    content_type = HTTPContentType::HTML;
+  } else {
+    fullpath = SERVER_ROOT / route.substr(1);
+    
+    // Add hints based on file extension
+    // It would be much better to do it by scanning the file content
+    // But doing this for simplicity and PoC
+    auto extension = fullpath.extension();
+    if (extension == ".html") {
+      content_type = HTTPContentType::HTML;
+    } else if (extension == ".png") {
+      content_type = HTTPContentType::PNG;
+    } else if (extension == ".jpg") {
+      content_type = HTTPContentType::JPG;
+    } else if (extension == ".jpeg") {
+      content_type = HTTPContentType::JPEG;
+    } else if (extension == ".gif") {
+      content_type = HTTPContentType::GIF;
+    }
+  }
+
+  auto file = read_file(fullpath);
+  if (!file) {
+    status = HTTPStatus::NOT_FOUND;
+    return false;
+  }
+
+  std::string file_content = file.value();
+
+  response_body = file_content;
+
+  return true;
+}
+
+bool HTTPParser::process_POST_request() { return true; }
+
+bool HTTPParser::process_request() {
+  if (http_method == "GET") {
+    return process_GET_request();
+  } else if (http_method == "POST") {
+    return process_POST_request();
+  } else {
+    status = HTTPStatus::BAD_REQUEST;
+    return false;
+  }
+}
+
+const std::string HTTPParser::get_error_response() {
+  if (status == HTTPStatus::BAD_REQUEST) {
+    response = "HTTP/1.1 400 Bad Request\r\n\r\n";
+  } else if (status == HTTPStatus::UNSUPPORTED_METHOD) {
+    response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
+  } else if (status == HTTPStatus::NOT_FOUND) {
+    response = "HTTP/1.1 404 Not Found\r\n\r\n";
+  } else if (status == HTTPStatus::FORBIDDEN) {
+    response = "HTTP/1.1 403 Forbidden\r\n\r\n";
+  } else {
+    response = "HTTP/1.1 418 I'm a teapot\r\n\r\n";
+  }
+
+  return response;
+}
+
+const std::string HTTPParser::getResponse() {
+  HTTPResponseBuilder builder(http_version, status, response_body, content_type);
+  auto response = builder.build();
+  return response;
 }

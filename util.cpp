@@ -1,6 +1,8 @@
 #include "util.h"
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <sstream>
 #include <iostream>
 
@@ -66,7 +68,7 @@ std::vector<std::string> split(const std::string &str, const std::string &delimi
     return result;
 }
 
-const std::string sanitize_path(const std::string &path)
+const std::optional<std::string> sanitize_path(const std::string &path)
 {
     std::filesystem::path requested(path);
 
@@ -74,19 +76,18 @@ const std::string sanitize_path(const std::string &path)
 
     if (requested.string().find("..") != std::string::npos)
     {
-        return "";
+        return std::nullopt;
     }
 
     return requested.string();
 }
 
-const std::string read_file(const std::string &path)
+const std::optional<std::string> read_file(const std::string &path)
 {
     std::ifstream file(path);
 
     if (!file.is_open()) {
-        perror("read_file() failed");
-        return "Z\\\\[/";
+        return std::nullopt;
     }
 
     std::stringstream buffer;

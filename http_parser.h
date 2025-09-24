@@ -12,20 +12,27 @@ enum HTTPLineType {
     BODY
 };
 
-enum HTTPError {
+enum HTTPStatus {
     BAD_REQUEST = 0,
     UNSUPPORTED_METHOD,
-    INVALID_HTTP_VERSION,
-    NO_ERROR,
+    OK,
     NOT_FOUND,
     FORBIDDEN
+};
+
+enum HTTPContentType {
+    HTML = 0,
+    PNG,
+    JPG,
+    JPEG,
+    GIF
 };
 
 class HTTPParser
 {
 private:
     std::string request;
-    HTTPError error = NO_ERROR;
+    HTTPStatus status = HTTPStatus::OK;
     std::filesystem::path SERVER_ROOT;
     std::string response;
 
@@ -35,6 +42,13 @@ private:
     std::string http_version;
     std::unordered_map<std::string, std::string> http_headers;
     std::string http_body;
+
+    // Response information variables
+    std::string response_body;
+
+    // Content type for response
+    HTTPContentType content_type;
+    
 
 public:
     HTTPParser(const std::string &request);
@@ -46,6 +60,14 @@ public:
     bool parse_request_line(const std::string &line);
     bool parse();
     bool validate_fields();
+
+    // Function to process the request
+    bool process_request();
+    bool process_GET_request();
+    bool process_POST_request();
+
+    // Response functions
+    const std::string get_error_response();
 
     const std::string getResponse();
 };
