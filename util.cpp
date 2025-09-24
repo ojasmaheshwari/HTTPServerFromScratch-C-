@@ -72,12 +72,7 @@ const std::optional<std::string> sanitize_path(const std::string &path)
 {
     std::filesystem::path requested(path);
 
-    std::cout << "Path: " << path << '\n';
-    std::cout << "requested: " << requested << '\n';
-
     requested = requested.lexically_normal();
-
-    std::cout << "after lexically normal: " << requested << '\n';
 
     if (requested.string().find("..") != std::string::npos)
     {
