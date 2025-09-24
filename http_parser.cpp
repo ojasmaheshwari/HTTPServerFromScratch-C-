@@ -1,56 +1,17 @@
 #include "http_parser.h"
 #include "http_response_builder.h"
 #include "util.h"
+#include "vendor/logging/include/Logging.h"
 #include <filesystem>
-#include <iostream>
 #include <set>
 
 HTTPParser::HTTPParser(const std::string &request)
     : request(request), SERVER_ROOT(std::filesystem::current_path() / "res") {}
 
-// bool HTTPParser::parse_request_line(const std::string &line) {
-//   auto parts = split(line, " ");
-
-//   if (parts.size() < 3) {
-//     error = HTTPError::BAD_REQUEST;
-//     return false;
-//   }
-
-//   std::string &method = parts[0];
-//   std::string &path = parts[1];
-//   std::string &version = parts[2];
-
-//   if (method != "GET") {
-//     error = HTTPError::UNSUPPORTED_METHOD;
-//     return false;
-//   }
-//   if (version != "HTTP/1.1") {
-//     error = HTTPError::BAD_REQUEST;
-//     return false;
-//   }
-
-//   // Fetch file
-//   std::string sanitized_path = sanitize_path(path);
-//   if (sanitized_path.empty()) {
-//     response = "";
-//     error = HTTPError::NOT_FOUND;
-//     return false;
-//   }
-
-//   std::filesystem::path full_path = SERVER_ROOT / sanitized_path.substr(1);
-
-//   std::string content = read_file(full_path);
-//   if (content == "Z\\\\[/") {
-//     error = HTTPError::NOT_FOUND;
-//     return false;
-//   }
-
-//   response = content;
-
-//   return true;
-// }
-
 bool HTTPParser::parse() {
+  Logging logger;
+  logger.setClassName("HTTPParser::parse()");
+
   // Plan: Parse the request string into an object
   //         The object should contain the following:-
   //              i) Request line - String
@@ -65,6 +26,8 @@ bool HTTPParser::parse() {
     // Even in a GET request, this split should have been successfull
     // The request is malformed if this split is not successfull
     status = HTTPStatus::BAD_REQUEST;
+    logger.warn("Malformed HTTP Request. An split on \\r\\n was attempted to separate request metadata from body and the split wasn't successfull. The error occured on the below request");
+    logger.warn(request);
     return false;
   }
   std::string request_metadata = parts[0];
@@ -79,6 +42,7 @@ bool HTTPParser::parse() {
   auto request_metadata_lines = split(request_metadata, "\r\n");
   if (request_metadata_lines.size() == 0) {
     status = HTTPStatus::BAD_REQUEST;
+    logger.warn("Malformed HTTP Request. Tried to split request_metadata on \\r\\n but no lines were returned.");
     return false;
   }
   request_line = request_metadata_lines[0];
@@ -94,6 +58,7 @@ bool HTTPParser::parse() {
   auto request_line_data = split(request_line, " ");
   if (request_line_data.size() != 3) {
     status = HTTPStatus::BAD_REQUEST;
+    logger.warn("Malformed HTTP Request. Tried to split the request line on space but failed.");
     return false;
   }
   http_method = request_line_data[0];
@@ -107,6 +72,8 @@ bool HTTPParser::parse() {
     auto data = split(header_str, ": ");
     if (data.size() != 2) {
       status = HTTPStatus::BAD_REQUEST;
+      logger.warn("Malformed Header. Tried to split header on ': ' but failed. Check the header string below.");
+      logger.warn(header_str);
       return false;
     }
 
@@ -127,24 +94,34 @@ bool HTTPParser::parse() {
 //      iii) Host header must be present with value = localhost:<PORT> or
 //      <SERVER_ADDRESS>:<PORT>
 bool HTTPParser::validate_fields() {
+  Logging logger;
+  logger.setClassName("HTTPParser::validate_fields()");
+
   std::set<std::string> allowed_methods = {"GET", "POST"};
   std::set<std::string> allowed_http_versions = {"HTTP/1.1", "HTTP/1.0"};
 
   if (allowed_methods.count(http_method) == 0) {
     status = HTTPStatus::UNSUPPORTED_METHOD;
+    logger.warn("Unknown HTTP method. The below given method was provided");
+    logger.warn(http_method);
     return false;
   }
   if (allowed_http_versions.count(http_version) == 0) {
     status = HTTPStatus::BAD_REQUEST;
+    logger.warn("Unknown HTTP version. The below given HTTP version was provided");
+    logger.warn(http_version);
     return false;
   }
   if (http_headers.count("Host") == 0) {
     status = HTTPStatus::BAD_REQUEST;
+    logger.warn("Host header not found.");
     return false;
   }
   const auto host = http_headers["Host"];
   if (host != "localhost:9173") {
     status = HTTPStatus::FORBIDDEN;
+    logger.warn("Host mismatch. The below given host was provided");
+    logger.warn(host);
     return false;
   }
 
@@ -152,6 +129,8 @@ bool HTTPParser::validate_fields() {
 }
 
 bool HTTPParser::process_GET_request() {
+  Logging logger;
+  logger.setClassName("HTTPParser::process_GET_request");
   // GET requests are used for fetching of files
   // First of all we need to sanitize the route we recieved in order to protect
   // against path traversals
@@ -159,6 +138,7 @@ bool HTTPParser::process_GET_request() {
   auto sanitized_route = sanitize_path(http_route);
   if (!sanitized_route) {
     status = HTTPStatus::FORBIDDEN;
+    logger.warn("Path traversal attempt blocked. Route tried to escape the SERVER ROOT");
     return false;
   }
 
@@ -194,6 +174,7 @@ bool HTTPParser::process_GET_request() {
   auto file = read_file(fullpath);
   if (!file) {
     status = HTTPStatus::NOT_FOUND;
+    logger.warn("Requested file not found - " + fullpath.string());
     return false;
   }
 
@@ -207,12 +188,16 @@ bool HTTPParser::process_GET_request() {
 bool HTTPParser::process_POST_request() { return true; }
 
 bool HTTPParser::process_request() {
+  Logging logger;
+  logger.setClassName("HTTPParser::process_request");
+
   if (http_method == "GET") {
     return process_GET_request();
   } else if (http_method == "POST") {
     return process_POST_request();
   } else {
     status = HTTPStatus::BAD_REQUEST;
+    logger.warn("Unknown request method used - " + http_method);
     return false;
   }
 }

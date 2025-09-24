@@ -1,9 +1,52 @@
 #include "http_parser.h"
 #include "util.h"
+#include "vendor/logging/include/Logging.h"
 #include <arpa/inet.h>
 #include <iostream>
 #include <netinet/in.h>
+#include <thread>
 #include <unistd.h>
+
+void handle_client(sockaddr_in client_address, int client_socket_fd) {
+  Logging logger;
+  logger.setClassName("handle_client");
+
+  // Print the client's IP address by converting the address from binary
+  // format to a char*
+  char client_ip_addr[100];
+  const char *ret_ntop =
+      inet_ntop(AF_INET, &client_address.sin_addr, client_ip_addr, 100);
+  if (ret_ntop == NULL) {
+    perror("inet_ntop() failed, unable to get client address");
+    exit(EXIT_FAILURE);
+  }
+
+  logger.info(std::string("Connection from: ") + client_ip_addr);
+
+  // Read incoming data
+  // Note: read() does not null terminate the array
+  // We have to do it ourselves, so always read 1 less byte than the size of
+  // your buffer
+  while (true) {
+    std::string request = receive_http_req(client_socket_fd);
+
+    std::cout << "Request receieved\n";
+
+    HTTPParser parser(request);
+    if (!parser.parse()) {
+      std::cout << "[!] FAILED TO PARSE REQUEST\n";
+    }
+
+    std::string response = parser.getResponse();
+    const char *response_buffer = response.c_str();
+
+    write(client_socket_fd, response_buffer, response.size());
+
+    break;
+  }
+
+  close(client_socket_fd);
+}
 
 int main() {
   // Integer return value used for validation of errors
@@ -80,47 +123,11 @@ int main() {
     int client_socket_fd = accept(socket_fd, (sockaddr *)(&client_address),
                                   (socklen_t *)&client_address_len);
     if (client_socket_fd == -1) {
-      std::cerr << "accept() call failed. Connection with client failed\n";
+      perror("accept() call failed. Connection with client failed\n");
       exit(EXIT_FAILURE);
     }
 
-    // Print the client's IP address by converting the address from binary
-    // format to a char*
-    char client_ip_addr[100];
-    const char *ret_ntop =
-        inet_ntop(AF_INET, &client_address.sin_addr, client_ip_addr, 100);
-    if (ret_ntop == NULL) {
-      perror("inet_ntop() failed, unable to get client address");
-      exit(EXIT_FAILURE);
-    }
-
-    std::cout << "Connection from: " << client_ip_addr << '\n';
-
-    // Read incoming data
-    // Note: read() does not null terminate the array
-    // We have to do it ourselves, so always read 1 less byte than the size of
-    // your buffer
-    while (true) {
-      std::string request = receive_http_req(client_socket_fd);
-
-      std::cout << "Request receieved\n";
-
-      HTTPParser parser(request);
-      if (!parser.parse()) {
-        std::cout << "[!] FAILED TO PARSE REQUEST\n";
-      }
-
-      std::string response = parser.getResponse();
-      const char *response_buffer = response.c_str();
-
-      std::cout << "Response sent" << '\n';
-
-      write(client_socket_fd, response_buffer, response.size());
-
-      break;
-    }
-
-    close(client_socket_fd);
+    std::thread(handle_client, client_address, client_socket_fd).detach();
   }
 
   close(socket_fd);

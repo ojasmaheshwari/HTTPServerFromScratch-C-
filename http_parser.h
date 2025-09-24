@@ -57,7 +57,6 @@ public:
     void reformat_newlines();
 
     // Parsing functions
-    bool parse_request_line(const std::string &line);
     bool parse();
     bool validate_fields();
 
