@@ -20,6 +20,7 @@ HTTPResponseBuilder::HTTPResponseBuilder(const std::string &version,
  contenttype_string_map[HTTPContentType::JPG] = "image/jpg";
  contenttype_string_map[HTTPContentType::JPEG] = "image/jpeg";
  contenttype_string_map[HTTPContentType::GIF] = "image/gif";
+ contenttype_string_map[HTTPContentType::ICO] = "image/x-icon";
 }
 
 std::string HTTPResponseBuilder::build() {
@@ -40,7 +41,7 @@ std::string HTTPResponseBuilder::build() {
   std::string response = version + " " + httpcode_string_map[status] + "\r\n" +
                          "Content-Type: " + ct + "\r\n" +
                          "Content-Length: " + std::to_string(content_length) +
-                         "\r\n" + "Connection: Close" + "\r\n" + "\r\n" +
+                         "\r\n" + "Connection: keep-alive" + "\r\n" + "\r\n" +
                          response_body;
   return response;
 }

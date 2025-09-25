@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include <netinet/in.h>
+#include <signal.h>
 #include <string>
 #include <thread>
 #include <unistd.h>
@@ -41,15 +42,23 @@ void handle_client(sockaddr_in client_address, int client_socket_fd) {
     std::string response = parser.getResponse();
     const char *response_buffer = response.c_str();
 
-    write(client_socket_fd, response_buffer, response.size());
-
-    break;
+    int data_written = write(client_socket_fd, response_buffer, response.size());
+	if (data_written == -1) {
+		logger.log(std::string("Client ") + client_ip_addr + " closed connection");
+		break;
+	}
   }
 
   close(client_socket_fd);
 }
 
 int main() {
+  // If the browser closes the connection then we write to a broken pipe
+  // In that case SIGPIPE will be thrown
+  // We ignore that and just log that the server closed connection and then
+  // accept new connections
+  signal(SIGPIPE, SIG_IGN);
+
   Logging logger;
   logger.setClassName("main");
 
@@ -111,14 +120,15 @@ int main() {
   }
 
   // Listen for connections
-  ret_val = listen(socket_fd, 5);
+  ret_val = listen(socket_fd, 20);
   ;
   if (ret_val == -1) {
     std::cerr << "Failed to call listen() on sockets\n";
     exit(EXIT_FAILURE);
   }
 
-  logger.log("HTTP Server listening on http://" + std::string(SERVER_ADDRESS) + ":" + std::to_string(PORT));
+  logger.log("HTTP Server listening on http://" + std::string(SERVER_ADDRESS) +
+             ":" + std::to_string(PORT));
 
   while (true) {
     // Since accept returns a socket file descriptor attached to the client
