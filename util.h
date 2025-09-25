@@ -5,6 +5,9 @@
 #include <unistd.h>
 #include <vector>
 
+#define SERVER_ADDRESS "192.168.14.58"
+#define PORT 8080
+
 const std::string receive_line(int socket_fd, int MAX_SIZE = 1024);
 const std::string receive_http_req(int socket_fd, int MAX_SIZE = 2048);
 void replaceAll(std::string& str, const std::string& from, const std::string& to);

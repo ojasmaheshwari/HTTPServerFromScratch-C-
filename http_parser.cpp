@@ -4,6 +4,7 @@
 #include "vendor/logging/include/Logging.h"
 #include <filesystem>
 #include <set>
+#include <string>
 
 HTTPParser::HTTPParser(const std::string &request)
     : request(request), SERVER_ROOT(std::filesystem::current_path() / "res") {}
@@ -118,10 +119,11 @@ bool HTTPParser::validate_fields() {
     return false;
   }
   const auto host = http_headers["Host"];
-  if (host != "localhost:9173") {
+  std::string correct_host_value = std::string(SERVER_ADDRESS) + ":" + std::to_string(PORT);
+  if (host != correct_host_value) {
     status = HTTPStatus::FORBIDDEN;
     logger.warn("Host mismatch. The below given host was provided");
-    logger.warn(host);
+    logger.warn("Got host: " + host + " Expected host: " + correct_host_value);
     return false;
   }
 
@@ -200,22 +202,6 @@ bool HTTPParser::process_request() {
     logger.warn("Unknown request method used - " + http_method);
     return false;
   }
-}
-
-const std::string HTTPParser::get_error_response() {
-  if (status == HTTPStatus::BAD_REQUEST) {
-    response = "HTTP/1.1 400 Bad Request\r\n\r\n";
-  } else if (status == HTTPStatus::UNSUPPORTED_METHOD) {
-    response = "HTTP/1.1 405 Method Not Allowed\r\n\r\n";
-  } else if (status == HTTPStatus::NOT_FOUND) {
-    response = "HTTP/1.1 404 Not Found\r\n\r\n";
-  } else if (status == HTTPStatus::FORBIDDEN) {
-    response = "HTTP/1.1 403 Forbidden\r\n\r\n";
-  } else {
-    response = "HTTP/1.1 418 I'm a teapot\r\n\r\n";
-  }
-
-  return response;
 }
 
 const std::string HTTPParser::getResponse() {

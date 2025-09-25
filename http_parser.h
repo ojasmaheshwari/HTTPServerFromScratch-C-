@@ -66,7 +66,5 @@ public:
     bool process_POST_request();
 
     // Response functions
-    const std::string get_error_response();
-
     const std::string getResponse();
 };

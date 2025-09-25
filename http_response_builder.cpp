@@ -25,6 +25,16 @@ HTTPResponseBuilder::HTTPResponseBuilder(const std::string &version,
 std::string HTTPResponseBuilder::build() {
   std::string ct = contenttype_string_map[content_type];
 
+  if (status == HTTPStatus::FORBIDDEN) {
+    response_body = forbidden_body;
+  } else if (status == HTTPStatus::NOT_FOUND) {
+    response_body = not_found_body;
+  } else if (status == HTTPStatus::BAD_REQUEST) {
+    response_body = bad_request_body;
+  } else if (status == HTTPStatus::UNSUPPORTED_METHOD) {
+    response_body = method_not_allowed_body;
+  }
+
   int content_length = response_body.size();
 
   std::string response = version + " " + httpcode_string_map[status] + "\r\n" +

@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <iostream>
 #include <netinet/in.h>
+#include <string>
 #include <thread>
 #include <unistd.h>
 
@@ -49,6 +50,9 @@ void handle_client(sockaddr_in client_address, int client_socket_fd) {
 }
 
 int main() {
+  Logging logger;
+  logger.setClassName("main");
+
   // Integer return value used for validation of errors
   int ret_val;
 
@@ -78,17 +82,17 @@ int main() {
   sockaddr_in address;
   address.sin_family = AF_INET;
 
-  // If we simply write address.sin_port = 9173; then we are storing the port in
+  // If we simply write address.sin_port = PORT; then we are storing the port in
   // host byte order (defaults to little endian) But the socket libraries use
   // network byte order which is big endian So we use htons() to convert our
   // integer from host byte order to network byte order
-  address.sin_port = htons(9173);
+  address.sin_port = htons(PORT);
 
   // Now we need to store an IP address inside address.sin_addr
   // For that we make use of 'inet_pton' which converts a given IP address in
   // string form to binary We need to do this as address.sin_addr resolves to
   // 32-bit unsigned int
-  ret_val = inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);
+  ret_val = inet_pton(AF_INET, SERVER_ADDRESS, &address.sin_addr);
   if (ret_val == 0) {
     std::cerr << "The IP address provided is not a valid IPv4 address\n";
     exit(EXIT_FAILURE);
@@ -113,6 +117,8 @@ int main() {
     std::cerr << "Failed to call listen() on sockets\n";
     exit(EXIT_FAILURE);
   }
+
+  logger.log("HTTP Server listening on http://" + std::string(SERVER_ADDRESS) + ":" + std::to_string(PORT));
 
   while (true) {
     // Since accept returns a socket file descriptor attached to the client
