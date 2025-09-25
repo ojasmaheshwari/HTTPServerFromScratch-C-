@@ -30,7 +30,8 @@ enum HTTPContentType {
     JPEG,
     GIF,
     ICO,
-    TEXT
+    TEXT,
+    JSON
 };
 
 class HTTPParser

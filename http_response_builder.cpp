@@ -23,6 +23,7 @@ HTTPResponseBuilder::HTTPResponseBuilder(const std::string &version,
  contenttype_string_map[HTTPContentType::GIF] = "image/gif";
  contenttype_string_map[HTTPContentType::ICO] = "image/x-icon";
  contenttype_string_map[HTTPContentType::TEXT] = "text/plain";
+ contenttype_string_map[HTTPContentType::JSON] = "application/json";
 }
 
 std::string HTTPResponseBuilder::build() {

@@ -185,6 +185,8 @@ bool HTTPParser::process_GET_request() {
       content_type = HTTPContentType::JPEG;
     } else if (extension == ".gif") {
       content_type = HTTPContentType::GIF;
+    } else if (extension == ".json") {
+      content_type = HTTPContentType::JSON;
     }
   }
 
@@ -243,6 +245,10 @@ bool HTTPParser::process_POST_request() {
   }
 
   status = HTTPStatus::CREATED;
+
+  std::string json_response = std::string("{ \"status\" : \"success\", \"message\" : \"File created successfully\", \"filepath\" : \"uploads/") + filename + "\" }";
+  response_body = json_response;
+
   return true;
 }
 
