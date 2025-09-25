@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -31,7 +32,10 @@ enum HTTPContentType {
     GIF,
     ICO,
     TEXT,
-    JSON
+    JSON,
+    OCTET_STREAM,
+    JS,
+    CSS
 };
 
 class HTTPParser
@@ -48,6 +52,7 @@ private:
     std::string http_version;
     std::unordered_map<std::string, std::string> http_headers;
     std::string http_body;
+    std::optional<std::string> http_requested_filename;
 
     // Response information variables
     std::string response_body;

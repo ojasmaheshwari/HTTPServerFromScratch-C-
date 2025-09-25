@@ -122,3 +122,11 @@ std::string generate_random_id(size_t length) {
 
     return id;
 }
+
+std::string get_rfc7231_date() {
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::gmtime(&t); // GMT time
+    char buf[30];
+    std::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &tm);
+    return std::string(buf);
+}

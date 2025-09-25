@@ -2,11 +2,11 @@
 #include "http_response_builder.h"
 #include "util.h"
 #include "vendor/logging/include/Logging.h"
+#include "vendor/nlohmann/json.hpp"
+#include <chrono>
 #include <filesystem>
 #include <set>
 #include <string>
-#include "vendor/nlohmann/json.hpp"
-#include <chrono>
 
 using json = nlohmann::json;
 
@@ -170,24 +170,6 @@ bool HTTPParser::process_GET_request() {
     content_type = HTTPContentType::HTML;
   } else {
     fullpath = SERVER_ROOT / route.substr(1);
-
-    // Add hints based on file extension
-    // It would be much better to do it by scanning the file content
-    // But doing this for simplicity and PoC
-    auto extension = fullpath.extension();
-    if (extension == ".html") {
-      content_type = HTTPContentType::HTML;
-    } else if (extension == ".png") {
-      content_type = HTTPContentType::PNG;
-    } else if (extension == ".jpg") {
-      content_type = HTTPContentType::JPG;
-    } else if (extension == ".jpeg") {
-      content_type = HTTPContentType::JPEG;
-    } else if (extension == ".gif") {
-      content_type = HTTPContentType::GIF;
-    } else if (extension == ".json") {
-      content_type = HTTPContentType::JSON;
-    }
   }
 
   auto file = read_file(fullpath);
@@ -199,6 +181,34 @@ bool HTTPParser::process_GET_request() {
 
   std::string file_content = file.value();
 
+  // Add hints based on file extension
+  // It would be much better to do it by scanning the file content
+  // But doing this for simplicity and PoC
+  auto extension = fullpath.extension();
+  if (extension == ".html") {
+    content_type = HTTPContentType::HTML;
+  } else if (extension == ".png") {
+    content_type = HTTPContentType::PNG;
+  } else if (extension == ".jpg") {
+    content_type = HTTPContentType::JPG;
+  } else if (extension == ".jpeg") {
+    content_type = HTTPContentType::JPEG;
+  } else if (extension == ".gif") {
+    content_type = HTTPContentType::GIF;
+  } else if (extension == ".json") {
+    content_type = HTTPContentType::JSON;
+  } else if (extension == ".js") {
+    content_type = HTTPContentType::JS;
+  } else if (extension == ".css") {
+    content_type = HTTPContentType::CSS;
+  } else {
+    content_type = HTTPContentType::OCTET_STREAM;
+  }
+
+  // If user requested an actual file then set http_requested_filename
+  if (fullpath.has_filename()) {
+    http_requested_filename = fullpath.filename();
+  }
   response_body = file_content;
 
   return true;
@@ -209,7 +219,8 @@ bool HTTPParser::process_POST_request() {
   logger.setClassName("HTTPParser::process_POST_request");
 
   // We only process JSON data in POST requests
-  // First of all, check whether the Content-Type of the incoming request is application/json
+  // First of all, check whether the Content-Type of the incoming request is
+  // application/json
 
   if (http_headers.count("Content-Type") == 0) {
     status = HTTPStatus::BAD_REQUEST;
@@ -219,7 +230,8 @@ bool HTTPParser::process_POST_request() {
 
   if (http_headers["Content-Type"] != "application/json") {
     status = HTTPStatus::UNSUPPORTED_MEDIA_TYPE;
-    logger.warn("Content-Type header of incoming POST request is not application/json");
+    logger.warn(
+        "Content-Type header of incoming POST request is not application/json");
     return false;
   }
 
@@ -232,9 +244,11 @@ bool HTTPParser::process_POST_request() {
 
   // Now that the JSON is valid
   // We can simply write the JSON content to res/uploads
-  auto current_ts = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  auto current_ts =
+      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   auto uid = generate_random_id(10);
-  std::string filename = "upload_" + std::to_string(current_ts) + "_" + uid + ".json";
+  std::string filename =
+      "upload_" + std::to_string(current_ts) + "_" + uid + ".json";
   std::filesystem::path path_to_write = SERVER_ROOT / "uploads" / filename;
 
   bool written = write_file(http_body, path_to_write);
@@ -246,7 +260,10 @@ bool HTTPParser::process_POST_request() {
 
   status = HTTPStatus::CREATED;
 
-  std::string json_response = std::string("{ \"status\" : \"success\", \"message\" : \"File created successfully\", \"filepath\" : \"uploads/") + filename + "\" }";
+  std::string json_response =
+      std::string("{ \"status\" : \"success\", \"message\" : \"File created "
+                  "successfully\", \"filepath\" : \"uploads/") +
+      filename + "\" }";
   response_body = json_response;
 
   return true;
@@ -268,8 +285,8 @@ bool HTTPParser::process_request() {
 }
 
 const std::string HTTPParser::getResponse() {
-  HTTPResponseBuilder builder(http_version, status, response_body,
-                              content_type);
+  HTTPResponseBuilder builder(http_version, status, response_body, content_type,
+                              http_headers, http_requested_filename);
   auto response = builder.build();
   return response;
 }

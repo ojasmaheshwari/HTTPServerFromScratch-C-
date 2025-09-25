@@ -16,3 +16,4 @@ const std::optional<std::string> sanitize_path(const std::string &path);
 const std::optional<std::string> read_file(const std::string &path);
 bool write_file(const std::string& content, const std::string &path);
 std::string generate_random_id(size_t length);
+std::string get_rfc7231_date();
