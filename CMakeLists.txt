@@ -15,4 +15,5 @@ add_executable(server
     vendor/logging/AsciiColor.cpp
     vendor/logging/Logging.cpp
     http_response_builder.cpp
+    vendor/nlohmann/json.hpp
 )

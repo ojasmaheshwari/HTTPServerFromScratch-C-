@@ -14,6 +14,7 @@ HTTPResponseBuilder::HTTPResponseBuilder(const std::string &version,
   httpcode_string_map[HTTPStatus::FORBIDDEN] = "403 Forbidden";
   httpcode_string_map[HTTPStatus::UNSUPPORTED_METHOD] =
       "405 Method Not Allowed";
+      httpcode_string_map[HTTPStatus::CREATED] = "201 Created";
 
  contenttype_string_map[HTTPContentType::HTML] = "text/html";
  contenttype_string_map[HTTPContentType::PNG] = "image/png";
@@ -21,6 +22,7 @@ HTTPResponseBuilder::HTTPResponseBuilder(const std::string &version,
  contenttype_string_map[HTTPContentType::JPEG] = "image/jpeg";
  contenttype_string_map[HTTPContentType::GIF] = "image/gif";
  contenttype_string_map[HTTPContentType::ICO] = "image/x-icon";
+ contenttype_string_map[HTTPContentType::TEXT] = "text/plain";
 }
 
 std::string HTTPResponseBuilder::build() {

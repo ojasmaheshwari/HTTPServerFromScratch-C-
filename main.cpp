@@ -42,11 +42,13 @@ void handle_client(sockaddr_in client_address, int client_socket_fd) {
     std::string response = parser.getResponse();
     const char *response_buffer = response.c_str();
 
-    int data_written = write(client_socket_fd, response_buffer, response.size());
-	if (data_written == -1) {
-		logger.log(std::string("Client ") + client_ip_addr + " closed connection");
-		break;
-	}
+    int data_written =
+        write(client_socket_fd, response_buffer, response.size());
+    if (data_written == -1) {
+      logger.log(std::string("Client ") + client_ip_addr +
+                 " closed connection");
+      break;
+    }
   }
 
   close(client_socket_fd);

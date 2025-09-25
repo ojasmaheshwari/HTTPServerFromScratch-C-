@@ -9,7 +9,7 @@ private:
     std::string version;
     HTTPStatus status;
     std::string response_body;
-    HTTPContentType content_type;
+    HTTPContentType content_type = HTTPContentType::TEXT;
     std::map<HTTPStatus, std::string> httpcode_string_map;
     std::map<HTTPContentType, std::string> contenttype_string_map;
 

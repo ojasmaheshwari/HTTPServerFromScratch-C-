@@ -17,7 +17,10 @@ enum HTTPStatus {
     UNSUPPORTED_METHOD,
     OK,
     NOT_FOUND,
-    FORBIDDEN
+    FORBIDDEN,
+    UNSUPPORTED_MEDIA_TYPE,
+    INTERNAL_SERVER_ERROR,
+    CREATED
 };
 
 enum HTTPContentType {
@@ -26,7 +29,8 @@ enum HTTPContentType {
     JPG,
     JPEG,
     GIF,
-    ICO
+    ICO,
+    TEXT
 };
 
 class HTTPParser
@@ -48,7 +52,7 @@ private:
     std::string response_body;
 
     // Content type for response
-    HTTPContentType content_type;
+    HTTPContentType content_type = HTTPContentType::TEXT;
     
 
 public:

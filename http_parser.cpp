@@ -5,6 +5,10 @@
 #include <filesystem>
 #include <set>
 #include <string>
+#include "vendor/nlohmann/json.hpp"
+#include <chrono>
+
+using json = nlohmann::json;
 
 HTTPParser::HTTPParser(const std::string &request)
     : request(request), SERVER_ROOT(std::filesystem::current_path() / "res") {}
@@ -27,7 +31,9 @@ bool HTTPParser::parse() {
     // Even in a GET request, this split should have been successfull
     // The request is malformed if this split is not successfull
     status = HTTPStatus::BAD_REQUEST;
-    logger.warn("Malformed HTTP Request. An split on \\r\\n was attempted to separate request metadata from body and the split wasn't successfull. The error occured on the below request");
+    logger.warn("Malformed HTTP Request. An split on \\r\\n was attempted to "
+                "separate request metadata from body and the split wasn't "
+                "successfull. The error occured on the below request");
     logger.warn(request);
     return false;
   }
@@ -43,7 +49,8 @@ bool HTTPParser::parse() {
   auto request_metadata_lines = split(request_metadata, "\r\n");
   if (request_metadata_lines.size() == 0) {
     status = HTTPStatus::BAD_REQUEST;
-    logger.warn("Malformed HTTP Request. Tried to split request_metadata on \\r\\n but no lines were returned.");
+    logger.warn("Malformed HTTP Request. Tried to split request_metadata on "
+                "\\r\\n but no lines were returned.");
     return false;
   }
   request_line = request_metadata_lines[0];
@@ -59,7 +66,8 @@ bool HTTPParser::parse() {
   auto request_line_data = split(request_line, " ");
   if (request_line_data.size() != 3) {
     status = HTTPStatus::BAD_REQUEST;
-    logger.warn("Malformed HTTP Request. Tried to split the request line on space but failed.");
+    logger.warn("Malformed HTTP Request. Tried to split the request line on "
+                "space but failed.");
     return false;
   }
   http_method = request_line_data[0];
@@ -73,7 +81,8 @@ bool HTTPParser::parse() {
     auto data = split(header_str, ": ");
     if (data.size() != 2) {
       status = HTTPStatus::BAD_REQUEST;
-      logger.warn("Malformed Header. Tried to split header on ': ' but failed. Check the header string below.");
+      logger.warn("Malformed Header. Tried to split header on ': ' but failed. "
+                  "Check the header string below.");
       logger.warn(header_str);
       return false;
     }
@@ -83,9 +92,12 @@ bool HTTPParser::parse() {
 
   // STEP 5
   bool is_valid_request = validate_fields();
+  if (!is_valid_request) {
+    return false;
+  }
   bool is_processing_successfull = process_request();
 
-  return is_valid_request && is_processing_successfull;
+  return is_processing_successfull;
 }
 
 // Validate data
@@ -109,7 +121,8 @@ bool HTTPParser::validate_fields() {
   }
   if (allowed_http_versions.count(http_version) == 0) {
     status = HTTPStatus::BAD_REQUEST;
-    logger.warn("Unknown HTTP version. The below given HTTP version was provided");
+    logger.warn(
+        "Unknown HTTP version. The below given HTTP version was provided");
     logger.warn(http_version);
     return false;
   }
@@ -119,7 +132,8 @@ bool HTTPParser::validate_fields() {
     return false;
   }
   const auto host = http_headers["Host"];
-  std::string correct_host_value = std::string(SERVER_ADDRESS) + ":" + std::to_string(PORT);
+  std::string correct_host_value =
+      std::string(SERVER_ADDRESS) + ":" + std::to_string(PORT);
   if (host != correct_host_value) {
     status = HTTPStatus::FORBIDDEN;
     logger.warn("Host mismatch. The below given host was provided");
@@ -133,14 +147,15 @@ bool HTTPParser::validate_fields() {
 bool HTTPParser::process_GET_request() {
   Logging logger;
   logger.setClassName("HTTPParser::process_GET_request");
+
   // GET requests are used for fetching of files
   // First of all we need to sanitize the route we recieved in order to protect
   // against path traversals
-
   auto sanitized_route = sanitize_path(http_route);
   if (!sanitized_route) {
     status = HTTPStatus::FORBIDDEN;
-    logger.warn("Path traversal attempt blocked. Route tried to escape the SERVER ROOT");
+    logger.warn("Path traversal attempt blocked. Route tried to escape the "
+                "SERVER ROOT");
     return false;
   }
 
@@ -155,7 +170,7 @@ bool HTTPParser::process_GET_request() {
     content_type = HTTPContentType::HTML;
   } else {
     fullpath = SERVER_ROOT / route.substr(1);
-    
+
     // Add hints based on file extension
     // It would be much better to do it by scanning the file content
     // But doing this for simplicity and PoC
@@ -187,7 +202,49 @@ bool HTTPParser::process_GET_request() {
   return true;
 }
 
-bool HTTPParser::process_POST_request() { return true; }
+bool HTTPParser::process_POST_request() {
+  Logging logger;
+  logger.setClassName("HTTPParser::process_POST_request");
+
+  // We only process JSON data in POST requests
+  // First of all, check whether the Content-Type of the incoming request is application/json
+
+  if (http_headers.count("Content-Type") == 0) {
+    status = HTTPStatus::BAD_REQUEST;
+    logger.warn("POST request does not contain the Content-Type header");
+    return false;
+  }
+
+  if (http_headers["Content-Type"] != "application/json") {
+    status = HTTPStatus::UNSUPPORTED_MEDIA_TYPE;
+    logger.warn("Content-Type header of incoming POST request is not application/json");
+    return false;
+  }
+
+  auto parsedJson = json::parse(http_body, nullptr, false);
+  if (parsedJson.is_discarded()) {
+    status = HTTPStatus::BAD_REQUEST;
+    logger.warn("POST request contains invalid JSON");
+    return false;
+  }
+
+  // Now that the JSON is valid
+  // We can simply write the JSON content to res/uploads
+  auto current_ts = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  auto uid = generate_random_id(10);
+  std::string filename = "upload_" + std::to_string(current_ts) + "_" + uid + ".json";
+  std::filesystem::path path_to_write = SERVER_ROOT / "uploads" / filename;
+
+  bool written = write_file(http_body, path_to_write);
+  if (!written) {
+    status = HTTPStatus::INTERNAL_SERVER_ERROR;
+    logger.warn("Failed to write to file in POST request");
+    return false;
+  }
+
+  status = HTTPStatus::CREATED;
+  return true;
+}
 
 bool HTTPParser::process_request() {
   Logging logger;
@@ -205,7 +262,8 @@ bool HTTPParser::process_request() {
 }
 
 const std::string HTTPParser::getResponse() {
-  HTTPResponseBuilder builder(http_version, status, response_body, content_type);
+  HTTPResponseBuilder builder(http_version, status, response_body,
+                              content_type);
   auto response = builder.build();
   return response;
 }
