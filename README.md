@@ -2,6 +2,7 @@
 
 ## Features implemented
 - GET and POST request methods
+- Protection against Path Traversals
 - Basic HTTP spec request parsing including parsing request line, headers and request body
 - Host Header Validation
 - Serving different file types via GET, for eg:-/index.html is served with `Content-Type: text/html` response header, different image formats are also served respectively
