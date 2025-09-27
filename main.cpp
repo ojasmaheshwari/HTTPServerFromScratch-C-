@@ -10,6 +10,10 @@
 #include <thread>
 #include <unistd.h>
 
+int PORT = 8080;
+const char* SERVER_ADDRESS = "127.0.0.1";
+int THREAD_POOL_SIZE = 20;
+
 void handle_client(sockaddr_in client_address, int client_socket_fd) {
   Logging logger;
   logger.setClassName("handle_client");
@@ -56,7 +60,14 @@ void handle_client(sockaddr_in client_address, int client_socket_fd) {
   close(client_socket_fd);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  // Check if user provides port, ip address, thread pool size
+  if (argc == 4) {
+    PORT = std::stoi(argv[1]);
+    SERVER_ADDRESS = argv[2];
+    THREAD_POOL_SIZE = std::stoi(argv[3]);
+  }
+
   // If the browser closes the connection then we write to a broken pipe
   // In that case SIGPIPE will be thrown
   // We ignore that and just log that the server closed connection and then
@@ -66,7 +77,7 @@ int main() {
   Logging logger;
   logger.setClassName("main");
 
-  ThreadPool pool(20);
+  ThreadPool pool(THREAD_POOL_SIZE);
 
   // Integer return value used for validation of errors
   int ret_val;
@@ -152,7 +163,7 @@ int main() {
     }
 
     // std::thread(handle_client, client_address, client_socket_fd).detach();
-    pool.enqueue([client_address, client_socket_fd] () {
+    pool.enqueue([client_address, client_socket_fd]() {
       handle_client(client_address, client_socket_fd);
     });
   }
