@@ -17,6 +17,9 @@
 OR<br>
 `./server <PORT> <IP_ADDRESS> <MAX_THREADS>`
 
+- The SERVER_ROOT is set to the relative path `./res` from where you ran the server binary
+- For the POST request to work, an `uploads` directory must exist inside the `res` folder
+
 ## Installation
 Make sure `cmake` and `make` are installed on your system
 
@@ -26,6 +29,7 @@ Make sure `cmake` and `make` are installed on your system
 - `cd build`
 - `cmake ..`
 - `make`
+- `mkdir -p res/uploads`
 - `./server` or `./server <PORT> <IP_ADDRESS> <MAX_THREADS>`
 
 ## Screenshots
