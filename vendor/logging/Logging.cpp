@@ -1,9 +1,10 @@
 #include "include/Logging.h"
 #include "include/AsciiColor.h"
-
+#include <ctime>
 #include <format>
-
+#include <sstream>
 #include <iostream>
+#include <iomanip>
 
 Logging::Logging()
   :m_LoggingLevel(LoggingLevel::LogLevelInfo), m_ClassName("Undefined")
@@ -51,13 +52,22 @@ void Logging::log(const std::string &message) {
 }
 
 void Logging::info(const std::string &message) {
-  std::cout << "[INFO] " << message << " [From " << m_ClassName << ']' << '\n';
+  std::cout << "[" + get_current_time() + "] " << message << " [From " << m_ClassName << ']' << '\n';
 }
 
 void Logging::warn(const std::string &message) {
-  std::cout << AsciiColor::colorized(std::format("{} {} [From {}]", "[WARNING]", message, m_ClassName), Ascii::Color::Yellow);
+  std::cout << AsciiColor::colorized(std::format("[{}] {} [From {}]", get_current_time(), message, m_ClassName), Ascii::Color::Yellow);
 }
 
 void Logging::error(const std::string &message) {
-  std::cout << AsciiColor::colorized(std::format("{} {} [From {}]", "[ERROR]", message, m_ClassName), Ascii::Color::Red);
+  std::cout << AsciiColor::colorized(std::format("[{}] {} [From {}]", get_current_time(), message, m_ClassName), Ascii::Color::Red);
+}
+
+std::string Logging::get_current_time() {
+  std::time_t now = std::time(nullptr);
+  std::tm local_tm = *std::localtime(&now);
+
+  std::ostringstream oss;
+  oss << std::put_time(&local_tm, "%Y-%m-%d %H:%M:%S");
+  return oss.str();
 }

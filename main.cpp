@@ -1,4 +1,5 @@
 #include "http_parser.h"
+#include "thread_pool.h"
 #include "util.h"
 #include "vendor/logging/include/Logging.h"
 #include <arpa/inet.h>
@@ -23,7 +24,10 @@ void handle_client(sockaddr_in client_address, int client_socket_fd) {
     exit(EXIT_FAILURE);
   }
 
-  logger.info(std::string("Connection from: ") + client_ip_addr);
+  int client_port = ntohs(client_address.sin_port);
+
+  logger.info(std::string("Connection from: ") + client_ip_addr + ":" +
+              std::to_string(client_port));
 
   // Read incoming data
   // Note: read() does not null terminate the array
@@ -31,8 +35,6 @@ void handle_client(sockaddr_in client_address, int client_socket_fd) {
   // your buffer
   while (true) {
     std::string request = receive_http_req(client_socket_fd);
-
-    std::cout << "Request receieved\n";
 
     HTTPParser parser(request);
     if (!parser.parse()) {
@@ -45,8 +47,8 @@ void handle_client(sockaddr_in client_address, int client_socket_fd) {
     int data_written =
         write(client_socket_fd, response_buffer, response.size());
     if (data_written == -1) {
-      logger.log(std::string("Client ") + client_ip_addr +
-                 " closed connection");
+      logger.log(std::string("Client ") + client_ip_addr + ":" +
+                 std::to_string(client_port) + " closed connection");
       break;
     }
   }
@@ -63,6 +65,8 @@ int main() {
 
   Logging logger;
   logger.setClassName("main");
+
+  ThreadPool pool(20);
 
   // Integer return value used for validation of errors
   int ret_val;
@@ -129,8 +133,10 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  logger.log("HTTP Server listening on http://" + std::string(SERVER_ADDRESS) +
+  logger.log("HTTP Server started on http://" + std::string(SERVER_ADDRESS) +
              ":" + std::to_string(PORT));
+  logger.log("Serving files from 'res' directory");
+  logger.log("Press Ctrl+C to stop the server");
 
   while (true) {
     // Since accept returns a socket file descriptor attached to the client
@@ -145,7 +151,10 @@ int main() {
       exit(EXIT_FAILURE);
     }
 
-    std::thread(handle_client, client_address, client_socket_fd).detach();
+    // std::thread(handle_client, client_address, client_socket_fd).detach();
+    pool.enqueue([client_address, client_socket_fd] () {
+      handle_client(client_address, client_socket_fd);
+    });
   }
 
   close(socket_fd);

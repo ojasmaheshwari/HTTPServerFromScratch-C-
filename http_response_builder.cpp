@@ -2,6 +2,7 @@
 #include "http_parser.h"
 #include "util.h"
 #include <string>
+#include "vendor/logging/include/Logging.h"
 
 HTTPResponseBuilder::HTTPResponseBuilder(
     const std::string &version, HTTPStatus status,
@@ -34,6 +35,8 @@ HTTPResponseBuilder::HTTPResponseBuilder(
 }
 
 std::string HTTPResponseBuilder::build() {
+  Logging logger;
+  logger.setClassName("HTTPResponseBuilder::build");
 
   if (status == HTTPStatus::FORBIDDEN) {
     response_body = forbidden_body;
@@ -94,6 +97,10 @@ std::string HTTPResponseBuilder::build() {
   }
 
   response += "\r\n" + response_body;
+
+  // Add logging
+  logger.info("Response: " + version + " " + httpcode_string_map[status]);
+  logger.info("Connection: " + connection_status);
 
   return response;
 }

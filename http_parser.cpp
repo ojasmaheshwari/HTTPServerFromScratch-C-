@@ -141,6 +141,14 @@ bool HTTPParser::validate_fields() {
     return false;
   }
 
+  std::string request_log_lines[] = {
+    http_method + " " + http_route + " " + http_version,
+    "Host validation: " + host + " ✅"
+  };
+  for (const auto& line : request_log_lines) {
+    logger.info(line);
+  }
+
   return true;
 }
 
@@ -217,6 +225,15 @@ bool HTTPParser::process_GET_request() {
 bool HTTPParser::process_POST_request() {
   Logging logger;
   logger.setClassName("HTTPParser::process_POST_request");
+
+  // We only process the /upload endpoint for now
+  // For all other requests, return a 404
+  auto route = sanitize_path(http_route);
+  if (!route.has_value() || (route.has_value() && route.value() != "/upload")) {
+    status = HTTPStatus::NOT_FOUND;
+    logger.warn(std::string("POST request on endpoint ") + route.value() + " is not found");
+    return false;
+  }
 
   // We only process JSON data in POST requests
   // First of all, check whether the Content-Type of the incoming request is

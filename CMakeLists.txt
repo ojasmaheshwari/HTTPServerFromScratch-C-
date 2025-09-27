@@ -12,6 +12,7 @@ add_executable(server
     main.cpp
     http_parser.cpp
     util.cpp
+    thread_pool.cpp
     vendor/logging/AsciiColor.cpp
     vendor/logging/Logging.cpp
     http_response_builder.cpp

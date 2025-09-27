@@ -26,4 +26,6 @@ public:
 private:
   LoggingLevel m_LoggingLevel;
   std::string m_ClassName;
+
+  std::string get_current_time();
 };
