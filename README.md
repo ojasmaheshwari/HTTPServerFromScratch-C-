@@ -27,3 +27,6 @@ Make sure `cmake` and `make` are installed on your system
 - `cmake ..`
 - `make`
 - `./server` or `./server <PORT> <IP_ADDRESS> <MAX_THREADS>`
+
+## Screenshots
+<img width="1920" height="1003" alt="http_server_sc" src="https://github.com/user-attachments/assets/501d066f-cfe2-4374-a184-74d929419dee" />
