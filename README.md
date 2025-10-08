@@ -1,5 +1,8 @@
 # Gigachad Server - A MultiThreaded Proof-Of-Concept HTTP Server in C++
 
+### Explanation Document:
+https://docs.google.com/document/d/1SNu9KzZWn261dJOrqGDoJRg_Sk06rtDGyN1QwR0f1CI/edit?usp=sharing
+
 ## Features implemented
 - GET and POST request methods
 - Protection against Path Traversals
