@@ -1,5 +1,5 @@
-#include "include/Logging.h"
-#include "include/AsciiColor.h"
+#include <logging/Logging.h>
+#include <logging/AsciiColor.h>
 #include <ctime>
 #include <format>
 #include <sstream>

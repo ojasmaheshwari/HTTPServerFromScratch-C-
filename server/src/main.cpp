@@ -1,6 +1,5 @@
-#include "thread_pool.h"
-#include "util.h"
-#include "vendor/logging/include/Logging.h"
+#include <util.h>
+#include <logging/Logging.h>
 #include <arpa/inet.h>
 #include <iostream>
 #include <netinet/in.h>
@@ -8,7 +7,8 @@
 #include <string>
 #include <thread>
 #include <unistd.h>
-#include "server.h"
+#include <server.h>
+#include <thread_pool.h>
 
 int PORT = 8080;
 const char* SERVER_ADDRESS = "127.0.0.1";

@@ -3,14 +3,14 @@
 //
 
 #include <benchmark/benchmark.h>
-#include "../server.h"
+#include <server.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <string>
-#include "../vendor/logging/include/Logging.h"
+#include <logging/Logging.h>
 #include <iostream>
-#include "../http_parser.h"
-#include "../util.h"
+#include <http_parser.h>
+#include <util.h>
 
 int PORT = 8080;
 const char* SERVER_ADDRESS = "127.0.0.1";

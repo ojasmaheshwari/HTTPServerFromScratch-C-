@@ -1,4 +1,4 @@
 .vscode
-server
 build
 cmake-build-debug
+server/cmake-build-debug

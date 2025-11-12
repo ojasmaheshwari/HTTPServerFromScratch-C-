@@ -1,8 +1,8 @@
-#include "http_response_builder.h"
-#include "http_parser.h"
-#include "util.h"
+#include <http_response_builder.h>
+#include <http_parser.h>
+#include <util.h>
 #include <string>
-#include "vendor/logging/include/Logging.h"
+#include <logging/Logging.h>
 
 HTTPResponseBuilder::HTTPResponseBuilder(
     const std::string &version, HTTPStatus status,
