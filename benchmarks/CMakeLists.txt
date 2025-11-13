@@ -11,7 +11,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Linux: static linking for libstdc++ and libgcc
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 
-add_subdirectory(google_benchmark)
+set(BENCHMARK_DOWNLOAD_DEPENDENCIES ON)
+add_subdirectory(benchmark)
 
 add_executable(bench_single_client_processing
         benchmark_single_client_processing.cpp
